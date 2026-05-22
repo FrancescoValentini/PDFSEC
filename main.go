@@ -190,10 +190,10 @@ func parsePermissions(s string, log *Logger) (model.PermissionFlags, error) {
 // printGeneratedPasswords outputs randomly generated user/owner passwords when applicable.
 func printGeneratedPasswords(cfg *Config) {
 	if cfg.RndUsrPassword {
-		fmt.Fprintf(os.Stderr, "User password:  %s\n", cfg.Passin)
+		fmt.Fprintf(os.Stderr, "Reader password: %s\n", cfg.Passin)
 	}
 	if cfg.RndOwnPassword && cfg.PrintOwner {
-		fmt.Fprintf(os.Stderr, "Owner password: %s\n", cfg.OwnerPassword)
+		fmt.Fprintf(os.Stderr, "Owner password:  %s\n", cfg.OwnerPassword)
 	}
 }
 
@@ -223,6 +223,54 @@ func encryptPDF(inputFile, outputFile, userPwd, ownerPwd string, permissions mod
 	return nil
 }
 
+// checkFileExists returns an error if the file does not exist or if the path points to a folder
+func checkFileExists(path string) error {
+	filePointer, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("file does not exist: %s", path)
+	}
+
+	if filePointer.IsDir() {
+		return fmt.Errorf("expected a single pdf file not a folder.")
+	}
+	return err
+}
+
 func main() {
-	fmt.Println("Hello World")
+	cfg, err := parseFlags()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	log := NewLogger(cfg.Verbose)
+	log.Info(fmt.Sprintf("Starting %s v%s", appName, appVersion))
+
+	if err := checkFileExists(cfg.InputFile); err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		os.Exit(1)
+	}
+
+	cfg.OutputFile = resolveOutputFile(cfg.InputFile, cfg.OutputFile)
+	printNewLine := getPassword(cfg, log)
+
+	if printNewLine {
+		fmt.Fprint(os.Stderr, "\n")
+	}
+
+	perms, err := parsePermissions(cfg.Permissions, log)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid permissions: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := encryptPDF(cfg.InputFile, cfg.OutputFile, cfg.Passin, cfg.OwnerPassword, perms, log); err != nil {
+		log.Error(fmt.Sprintf("Encryption failed: %v", err))
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	printGeneratedPasswords(cfg)
+
+	log.Info("Done.")
 }
