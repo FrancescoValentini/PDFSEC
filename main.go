@@ -148,6 +148,19 @@ func defaultPermissions() model.PermissionFlags {
 		model.PermissionModAnnFillForm
 }
 
+func permissionMap() map[string]model.PermissionFlags {
+	return map[string]model.PermissionFlags{
+		"print":     model.PermissionPrintRev3,
+		"print-low": model.PermissionPrintRev2,
+		"modify":    model.PermissionModify,
+		"copy":      model.PermissionExtract,
+		"extract":   model.PermissionExtractRev3,
+		"annotate":  model.PermissionModAnnFillForm,
+		"fill":      model.PermissionFillRev3,
+		"assemble":  model.PermissionAssembleRev3,
+	}
+}
+
 // printGeneratedPasswords outputs randomly generated user/owner passwords when applicable.
 func printGeneratedPasswords(cfg *Config) {
 	if cfg.RndUsrPassword {
