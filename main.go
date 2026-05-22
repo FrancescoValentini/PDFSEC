@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
@@ -165,6 +166,22 @@ func resolveOutputFile(input, output string) string {
 	ext := filepath.Ext(input)
 	name := strings.TrimSuffix(input, ext)
 	return name + fileSuffix + ext
+}
+
+// encryptPDF encrypts the input PDF using AES-256 with the provided passwords and permissions.
+func encryptPDF(inputFile, outputFile, userPwd, ownerPwd string, permissions model.PermissionFlags, log *Logger) error {
+	log.Info(fmt.Sprintf("Reading input file: %s", filepath.Base(inputFile)))
+
+	conf := model.NewAESConfiguration(userPwd, ownerPwd, 256)
+	conf.Permissions = permissions
+
+	log.Info("Encrypting with AES-256...")
+	if err := api.EncryptFile(inputFile, outputFile, conf); err != nil {
+		return err
+	}
+
+	log.Info(fmt.Sprintf("Encrypted file written: %s", filepath.Base(outputFile)))
+	return nil
 }
 
 func main() {
