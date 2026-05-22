@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
@@ -11,6 +13,7 @@ import (
 const (
 	appName    = "PDFSEC"
 	appVersion = "1.0.0"
+	fileSuffix = "-protected"
 )
 
 // Config holds all parsed CLI options.
@@ -142,6 +145,26 @@ func defaultPermissions() model.PermissionFlags {
 	return model.PermissionPrintRev3 |
 		model.PermissionExtract |
 		model.PermissionModAnnFillForm
+}
+
+// printGeneratedPasswords outputs randomly generated user/owner passwords when applicable.
+func printGeneratedPasswords(cfg *Config) {
+	if cfg.RndUsrPassword {
+		fmt.Fprintf(os.Stderr, "User password:  %s\n", cfg.Passin)
+	}
+	if cfg.RndOwnPassword && cfg.PrintOwner {
+		fmt.Fprintf(os.Stderr, "Owner password: %s\n", cfg.OwnerPassword)
+	}
+}
+
+// resolveOutputFile determines the output filename, adding a suffix if none is provided.
+func resolveOutputFile(input, output string) string {
+	if output != "" {
+		return output
+	}
+	ext := filepath.Ext(input)
+	name := strings.TrimSuffix(input, ext)
+	return name + fileSuffix + ext
 }
 
 func main() {
