@@ -27,7 +27,7 @@ Author: Francesco Valentini
 #> 
 
 # Project Variables
-$ProjectName = "FProt"
+$ProjectName = "pdfsec"
 $OutputDir = "build"
 $ReportFile = "build_report.md"
 
