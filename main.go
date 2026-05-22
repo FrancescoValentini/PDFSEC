@@ -19,16 +19,17 @@ const (
 
 // Config holds all parsed CLI options.
 type Config struct {
-	Passin         string
-	OwnerPassword  string
-	Permissions    string
-	InputFile      string
-	OutputFile     string
-	PrintOwner     bool
-	Verbose        bool
-	ShowVersion    bool
-	RndUsrPassword bool
-	RndOwnPassword bool
+	Passin            string
+	OwnerPassword     string
+	Permissions       string
+	InputFile         string
+	OutputFile        string
+	OwnerPasswordOnly bool
+	PrintOwner        bool
+	Verbose           bool
+	ShowVersion       bool
+	RndUsrPassword    bool
+	RndOwnPassword    bool
 }
 
 func printHelp() {
@@ -43,6 +44,9 @@ FLAGS:
   --permissions <list>      Comma-separated permissions to grant (default: print,copy,annotate).
                             Choices: print, print-low, copy, extract, modify, annotate, fill, assemble
   --print-owner-password    Print the owner password to stderr when randomly generated.
+  --no-reader-password      Set PDF permissions using only an owner password, without requiring a reader 
+  							password to open the document
+
   --verbose                 Print logs
   --version                 Print version and exit.
   --help                    Show this help message.
@@ -55,10 +59,10 @@ EXAMPLES:
   %s --passin hunter2 --owner-password s3cr3t document.pdf encrypted.pdf
 
   # Restrict to print-only, no copying
-  %s --passin "" --permissions print document.pdf encrypted.pdf
+  %s --no-reader-password --permissions print document.pdf encrypted.pdf
 
   # Verbose mode
-  %s --verbose --passin "" document.pdf encrypted.pdf
+  %s --verbose --no-reader-password document.pdf encrypted.pdf
 
 PERMISSIONS:
   print       Allow high-quality printing
@@ -85,6 +89,7 @@ func parseFlags() (*Config, error) {
 	flag.StringVar(&cfg.OwnerPassword, "owner-password", "", "Owner password")
 	flag.StringVar(&cfg.Permissions, "permissions", "", "Comma-separated permission list")
 	flag.BoolVar(&cfg.PrintOwner, "print-owner-password", false, "Print owner password if randomly generated")
+	flag.BoolVar(&cfg.OwnerPasswordOnly, "no-reader-password", false, "Set PDF permissions using only an owner password, without requiring a reader password to open the document")
 	flag.BoolVar(&cfg.Verbose, "verbose", false, "Print logs")
 	flag.BoolVar(&cfg.ShowVersion, "version", false, "Print version and exit")
 	flag.Parse()
@@ -111,18 +116,23 @@ func parseFlags() (*Config, error) {
 // getPassword retrieves user and owner passwords either from CLI flags or via interactive TTY prompts.
 func getPassword(cfg *Config, log *Logger) bool {
 	var globRnd bool = false
-	if cfg.Passin == "" {
-		log.Info("No user password provided via flag - prompting")
-		pwd, rnd, err := ReadPasswordFromTTY("user")
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error reading user password,\ntry again, if it still fails try providing the password via the appropriate command line flag.")
-			os.Exit(1)
+
+	if !cfg.OwnerPasswordOnly {
+		if cfg.Passin == "" {
+			log.Info("No user password provided via flag - prompting")
+			pwd, rnd, err := ReadPasswordFromTTY("user")
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Error reading user password,\ntry again, if it still fails try providing the password via the appropriate command line flag.")
+				os.Exit(1)
+			}
+			cfg.Passin = pwd
+			cfg.RndUsrPassword = rnd
+			globRnd = rnd
+		} else {
+			log.Info("User password supplied via flag")
 		}
-		cfg.Passin = pwd
-		cfg.RndUsrPassword = rnd
-		globRnd = rnd
 	} else {
-		log.Info("User password supplied via flag")
+		log.Info("Using only an owner password for PDF permissions")
 	}
 
 	if cfg.OwnerPassword == "" {
@@ -192,7 +202,7 @@ func printGeneratedPasswords(cfg *Config) {
 	if cfg.RndUsrPassword {
 		fmt.Fprintf(os.Stderr, "Reader password: %s\n", cfg.Passin)
 	}
-	if cfg.RndOwnPassword && cfg.PrintOwner {
+	if cfg.RndOwnPassword && (cfg.PrintOwner || cfg.OwnerPasswordOnly) {
 		fmt.Fprintf(os.Stderr, "Owner password:  %s\n", cfg.OwnerPassword)
 	}
 }
@@ -268,6 +278,10 @@ func main() {
 		log.Error(fmt.Sprintf("Encryption failed: %v", err))
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
+	}
+
+	if cfg.OwnerPasswordOnly {
+		fmt.Fprintln(os.Stderr, "WARNING: the PDF is not fully encrypted. Only PDF permissions are set, and some readers may ignore or bypass them.")
 	}
 
 	printGeneratedPasswords(cfg)
