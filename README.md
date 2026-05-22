@@ -60,12 +60,12 @@ pdfsec --passin hunter2 --owner-password s3cr3t document.pdf encrypted.pdf
 
 **Read-only: allow printing, no copying:**
 ```bash
-pdfsec --passin "" --permissions print document.pdf encrypted.pdf
+pdfsec --no-reader-password --permissions print document.pdf encrypted.pdf
 ```
 
 **No user password, restrict to print and annotate only:**
 ```bash
-pdfsec --passin "" --permissions print,annotate document.pdf
+pdfsec --no-reader-password --permissions print,annotate document.pdf
 ```
 
 **Permissions only, no password required to open:**
