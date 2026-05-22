@@ -1,6 +1,148 @@
 package main
 
-import "fmt"
+import (
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+)
+
+const (
+	appName    = "PDFSEC"
+	appVersion = "1.0.0"
+)
+
+// Config holds all parsed CLI options.
+type Config struct {
+	Passin         string
+	OwnerPassword  string
+	Permissions    string
+	InputFile      string
+	OutputFile     string
+	PrintOwner     bool
+	Verbose        bool
+	ShowVersion    bool
+	RndUsrPassword bool
+	RndOwnPassword bool
+}
+
+func printHelp() {
+	fmt.Printf(`%s v%s - Encrypt PDF files with AES-256 and fine-grained permissions.
+
+USAGE:
+  %s [flags] <input.pdf> <output.pdf>
+
+FLAGS:
+  --passin <pwd>            User (open) password. Prompted interactively if omitted.
+  --owner-password <pwd>    Owner password. Prompted interactively if omitted.
+  --permissions <list>      Comma-separated permissions to grant (default: print,copy,annotate).
+                            Choices: print, print-low, copy, extract, modify, annotate, fill, assemble
+  --print-owner-password    Print the owner password to stderr when randomly generated.
+  --verbose                 Print logs
+  --version                 Print version and exit.
+  --help                    Show this help message.
+
+EXAMPLES:
+  # Encrypt with interactive password prompts
+  %s document.pdf encrypted.pdf
+
+  # Encrypt with passwords supplied directly
+  %s --passin hunter2 --owner-password s3cr3t document.pdf encrypted.pdf
+
+  # Restrict to print-only, no copying
+  %s --passin "" --permissions print document.pdf encrypted.pdf
+
+  # Verbose mode
+  %s --verbose --passin "" document.pdf encrypted.pdf
+
+PERMISSIONS:
+  print       Allow high-quality printing
+  print-low   Allow low-quality (draft) printing only
+  copy        Allow copying text and images
+  extract     Allow content extraction (accessibility)
+  modify      Allow document modifications
+  annotate    Allow adding annotations and filling forms
+  fill        Allow filling form fields
+  assemble    Allow inserting, rotating, or deleting pages
+
+AUTHOR:
+  Francesco Valentini (C) 2026
+`, appName, appVersion, appName, appName, appName, appName, appName)
+}
+
+// parseFlags parses command-line flags, validates required arguments, and builds the Config struct.
+func parseFlags() (*Config, error) {
+	cfg := &Config{}
+
+	flag.Usage = printHelp
+
+	flag.StringVar(&cfg.Passin, "passin", "", "User (open) password")
+	flag.StringVar(&cfg.OwnerPassword, "owner-password", "", "Owner password")
+	flag.StringVar(&cfg.Permissions, "permissions", "", "Comma-separated permission list")
+	flag.BoolVar(&cfg.PrintOwner, "print-owner-password", false, "Print owner password if randomly generated")
+	flag.BoolVar(&cfg.Verbose, "verbose", false, "Print logs")
+	flag.BoolVar(&cfg.ShowVersion, "version", false, "Print version and exit")
+	flag.Parse()
+
+	if cfg.ShowVersion {
+		fmt.Printf("%s version %s\n", appName, appVersion)
+		os.Exit(0)
+	}
+
+	args := flag.Args()
+	if len(args) < 1 {
+		printHelp()
+		return nil, fmt.Errorf("error: input and output file paths are required")
+	}
+
+	cfg.InputFile = args[0]
+	cfg.InputFile = args[0]
+	if len(args) >= 2 {
+		cfg.OutputFile = args[1]
+	}
+	return cfg, nil
+}
+
+// getPassword retrieves user and owner passwords either from CLI flags or via interactive TTY prompts.
+func getPassword(cfg *Config, log *Logger) bool {
+	var globRnd bool = false
+	if cfg.Passin == "" {
+		log.Info("No user password provided via flag - prompting")
+		pwd, rnd, err := ReadPasswordFromTTY("user")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error reading user password,\ntry again, if it still fails try providing the password via the appropriate command line flag.")
+			os.Exit(1)
+		}
+		cfg.Passin = pwd
+		cfg.RndUsrPassword = rnd
+		globRnd = rnd
+	} else {
+		log.Info("User password supplied via flag")
+	}
+
+	if cfg.OwnerPassword == "" {
+		log.Info("No owner password provided via flag - prompting")
+		pwd, rnd, err := ReadPasswordFromTTY("owner")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error reading owner password,\ntry again, if it still fails try providing the password via the appropriate command line flag.")
+			os.Exit(1)
+		}
+		cfg.OwnerPassword = pwd
+		cfg.RndOwnPassword = rnd
+		globRnd = rnd
+	} else {
+		log.Info("Owner password supplied via flag")
+	}
+	return globRnd
+}
+
+// defaultPermissions returns the default set of PDF permissions (print, extract, annotate/fill forms).
+func defaultPermissions() model.PermissionFlags {
+	return model.PermissionPrintRev3 |
+		model.PermissionExtract |
+		model.PermissionModAnnFillForm
+}
 
 func main() {
 	fmt.Println("Hello World")
