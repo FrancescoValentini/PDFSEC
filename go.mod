@@ -2,7 +2,9 @@ module pdfsec
 
 go 1.25.5
 
-require golang.org/x/term v0.43.0
+require github.com/pdfcpu/pdfcpu v0.12.1
+
+require golang.org/x/sys v0.44.0 // indirect
 
 require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
@@ -10,11 +12,10 @@ require (
 	github.com/hhrutter/pkcs7 v0.2.2 // indirect
 	github.com/hhrutter/tiff v1.0.3 // indirect
 	github.com/mattn/go-runewidth v0.0.23 // indirect
-	github.com/pdfcpu/pdfcpu v0.12.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/image v0.39.0 // indirect
-	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/term v0.43.0
 	golang.org/x/text v0.36.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

@@ -1,21 +1,13 @@
-package main
+package cli
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/big"
 	"os"
+	"pdfsec/internal/core"
 	"runtime"
 
 	"golang.org/x/term"
-)
-
-const (
-	charset    = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // human-friendly charset
-	groupSize  = 5
-	groupCount = 5
-	separator  = "-"
 )
 
 // ReadPasswordFromTTY securely reads a password from the terminal with confirmation.
@@ -38,7 +30,7 @@ func ReadPasswordFromTTY(pwdRecipient string) (string, bool, error) {
 	}
 
 	if len(pass1) == 0 {
-		pw, err := GeneratePassword()
+		pw, err := core.GeneratePassword()
 		return pw, true, err // random password
 	}
 
@@ -64,29 +56,4 @@ func openTTY() (*os.File, error) {
 		return os.OpenFile("CONIN$", os.O_RDWR, 0)
 	}
 	return os.OpenFile("/dev/tty", os.O_RDWR, 0)
-}
-
-// GeneratePassword generate a random password formatted as:
-// AAAAA-BBBBB-CCCCC-DDDDD-EEEEE
-func GeneratePassword() (string, error) {
-	totalChars := groupSize * groupCount
-	password := make([]byte, 0, totalChars+(groupCount-1))
-
-	max := big.NewInt(int64(len(charset)))
-
-	for i := 0; i < totalChars; i++ {
-		// separator every n characters
-		if i > 0 && i%groupSize == 0 {
-			password = append(password, separator...)
-		}
-
-		n, err := rand.Int(rand.Reader, max)
-		if err != nil {
-			return "", err
-		}
-
-		password = append(password, charset[n.Int64()])
-	}
-
-	return string(password), nil
 }

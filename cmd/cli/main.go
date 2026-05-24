@@ -5,16 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"pdfsec/internal/cli"
+	"pdfsec/internal/core"
 	"strings"
-
-	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-)
-
-const (
-	appName    = "PDFSEC"
-	appVersion = "1.0.0"
-	fileSuffix = "-protected"
 )
 
 // Config holds all parsed CLI options.
@@ -76,7 +69,7 @@ PERMISSIONS:
 
 AUTHOR:
   Francesco Valentini (C) 2026
-`, appName, appVersion, appName, appName, appName, appName, appName)
+`, core.AppName, core.AppVersion, core.AppName, core.AppName, core.AppName, core.AppName, core.AppName)
 }
 
 // parseFlags parses command-line flags, validates required arguments, and builds the Config struct.
@@ -95,7 +88,7 @@ func parseFlags() (*Config, error) {
 	flag.Parse()
 
 	if cfg.ShowVersion {
-		fmt.Printf("%s version %s\n", appName, appVersion)
+		fmt.Printf("%s version %s\n", core.AppName, core.AppVersion)
 		os.Exit(0)
 	}
 
@@ -114,13 +107,13 @@ func parseFlags() (*Config, error) {
 }
 
 // getPassword retrieves user and owner passwords either from CLI flags or via interactive TTY prompts.
-func getPassword(cfg *Config, log *Logger) bool {
+func getPassword(cfg *Config, log *cli.Logger) bool {
 	var globRnd bool = false
 
 	if !cfg.OwnerPasswordOnly {
 		if cfg.Passin == "" {
 			log.Info("No user password provided via flag - prompting")
-			pwd, rnd, err := ReadPasswordFromTTY("user")
+			pwd, rnd, err := cli.ReadPasswordFromTTY("user")
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "Error reading user password,\ntry again, if it still fails try providing the password via the appropriate command line flag.")
 				os.Exit(1)
@@ -137,7 +130,7 @@ func getPassword(cfg *Config, log *Logger) bool {
 
 	if cfg.OwnerPassword == "" {
 		log.Info("No owner password provided via flag - prompting")
-		pwd, rnd, err := ReadPasswordFromTTY("owner")
+		pwd, rnd, err := cli.ReadPasswordFromTTY("owner")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error reading owner password,\ntry again, if it still fails try providing the password via the appropriate command line flag.")
 			os.Exit(1)
@@ -151,52 +144,6 @@ func getPassword(cfg *Config, log *Logger) bool {
 	return globRnd
 }
 
-// defaultPermissions returns the default set of PDF permissions (print, extract, annotate/fill forms).
-func defaultPermissions() model.PermissionFlags {
-	return model.PermissionPrintRev3 |
-		model.PermissionExtract |
-		model.PermissionModAnnFillForm
-}
-
-// permissionMap returns a key-value mapping for the PDF's permissions
-// https://pkg.go.dev/github.com/pdfcpu/pdfcpu@v0.12.1/pkg/pdfcpu/model#PermissionFlags
-func permissionMap() map[string]model.PermissionFlags {
-	return map[string]model.PermissionFlags{
-		"print":     model.PermissionPrintRev3,
-		"print-low": model.PermissionPrintRev2,
-		"modify":    model.PermissionModify,
-		"copy":      model.PermissionExtract,
-		"extract":   model.PermissionExtractRev3,
-		"annotate":  model.PermissionModAnnFillForm,
-		"fill":      model.PermissionFillRev3,
-		"assemble":  model.PermissionAssembleRev3,
-	}
-}
-
-// parsePermissions parses a comma-separated permission string into pdfcpu permission flags.
-func parsePermissions(s string, log *Logger) (model.PermissionFlags, error) {
-	if strings.TrimSpace(s) == "" {
-		log.Info("No permissions specified - using defaults (print, copy, annotate)")
-		return defaultPermissions(), nil
-	}
-
-	permMap := permissionMap()
-
-	var perms model.PermissionFlags
-	items := strings.Split(s, ",")
-	for _, item := range items {
-		key := strings.TrimSpace(strings.ToLower(item))
-		p, ok := permMap[key]
-		if !ok {
-			return 0, fmt.Errorf("unknown permission %q - valid choices: print, print-low, copy, extract, modify, annotate, fill, assemble", item)
-		}
-		perms |= p
-	}
-
-	log.Info(fmt.Sprintf("Permissions set: %s", strings.TrimSpace(s)))
-	return perms, nil
-}
-
 // printGeneratedPasswords outputs randomly generated user/owner passwords when applicable.
 func printGeneratedPasswords(cfg *Config) {
 	if cfg.RndUsrPassword {
@@ -207,45 +154,6 @@ func printGeneratedPasswords(cfg *Config) {
 	}
 }
 
-// resolveOutputFile determines the output filename, adding a suffix if none is provided.
-func resolveOutputFile(input, output string) string {
-	if output != "" {
-		return output
-	}
-	ext := filepath.Ext(input)
-	name := strings.TrimSuffix(input, ext)
-	return name + fileSuffix + ext
-}
-
-// encryptPDF encrypts the input PDF using AES-256 with the provided passwords and permissions.
-func encryptPDF(inputFile, outputFile, userPwd, ownerPwd string, permissions model.PermissionFlags, log *Logger) error {
-	log.Info(fmt.Sprintf("Reading input file: %s", filepath.Base(inputFile)))
-
-	conf := model.NewAESConfiguration(userPwd, ownerPwd, 256)
-	conf.Permissions = permissions
-
-	log.Info("Encrypting with AES-256...")
-	if err := api.EncryptFile(inputFile, outputFile, conf); err != nil {
-		return err
-	}
-
-	log.Info(fmt.Sprintf("Encrypted file written: %s", filepath.Base(outputFile)))
-	return nil
-}
-
-// checkFileExists returns an error if the file does not exist or if the path points to a folder
-func checkFileExists(path string) error {
-	filePointer, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("file does not exist: %s", path)
-	}
-
-	if filePointer.IsDir() {
-		return fmt.Errorf("expected a single pdf file not a folder.")
-	}
-	return err
-}
-
 func main() {
 	cfg, err := parseFlags()
 	if err != nil {
@@ -253,32 +161,49 @@ func main() {
 		os.Exit(1)
 	}
 
-	log := NewLogger(cfg.Verbose)
-	log.Info(fmt.Sprintf("Starting %s v%s", appName, appVersion))
+	log := cli.NewLogger(cfg.Verbose)
+	log.Info(fmt.Sprintf("Starting %s v%s", core.AppName, core.AppVersion))
 
-	if err := checkFileExists(cfg.InputFile); err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
+	if err := core.CheckFileExists(cfg.InputFile); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	cfg.OutputFile = resolveOutputFile(cfg.InputFile, cfg.OutputFile)
+	perms, err := core.ParsePermissions(cfg.Permissions)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if strings.TrimSpace(cfg.Permissions) == "" {
+		log.Info("No permissions specified - using defaults (print, copy, annotate)")
+	} else {
+		log.Info(fmt.Sprintf("Permissions set: %s", strings.TrimSpace(cfg.Permissions)))
+	}
+
 	printNewLine := getPassword(cfg, log)
 
 	if printNewLine {
 		fmt.Fprint(os.Stderr, "\n")
 	}
 
-	perms, err := parsePermissions(cfg.Permissions, log)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid permissions: %v\n", err)
-		os.Exit(1)
-	}
+	log.Info("Encrypting with AES-256...")
+	err = core.EncryptPDF(core.EncryptOptions{
+		InputFile: cfg.InputFile,
+		OutputFile: core.ResolveOutputFile(
+			cfg.InputFile,
+			cfg.OutputFile,
+		),
+		UserPassword:  cfg.Passin,
+		OwnerPassword: cfg.OwnerPassword,
+		Permissions:   perms,
+	})
 
-	if err := encryptPDF(cfg.InputFile, cfg.OutputFile, cfg.Passin, cfg.OwnerPassword, perms, log); err != nil {
-		log.Error(fmt.Sprintf("Encryption failed: %v", err))
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	log.Info(fmt.Sprintf("Encrypted file written: %s", filepath.Base(cfg.OutputFile)))
 
 	if cfg.OwnerPasswordOnly {
 		fmt.Fprintln(os.Stderr, "WARNING: the PDF is not fully encrypted. Only PDF permissions are set, and some readers may ignore or bypass them.")
