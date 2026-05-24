@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"pdfsec/internal/cli"
 	"pdfsec/internal/core"
 	"strings"
@@ -186,6 +187,7 @@ func main() {
 		fmt.Fprint(os.Stderr, "\n")
 	}
 
+	log.Info("Encrypting with AES-256...")
 	err = core.EncryptPDF(core.EncryptOptions{
 		InputFile: cfg.InputFile,
 		OutputFile: core.ResolveOutputFile(
@@ -201,6 +203,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	log.Info(fmt.Sprintf("Encrypted file written: %s", filepath.Base(cfg.OutputFile)))
 
 	if cfg.OwnerPasswordOnly {
 		fmt.Fprintln(os.Stderr, "WARNING: the PDF is not fully encrypted. Only PDF permissions are set, and some readers may ignore or bypass them.")
