@@ -18,8 +18,8 @@ func main() {
 
 	err := wails.Run(&options.App{
 		Title:     "PDFSec",
-		Width:     900,
-		Height:    600,
+		Width:     520,
+		Height:    720,
 		Assets:    assets,
 		OnStartup: app.Startup,
 		Bind: []interface{}{
