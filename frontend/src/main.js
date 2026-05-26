@@ -1,7 +1,8 @@
 import {
     OpenFileDialog,
     SaveFileDialog,
-    RandomPassword
+    RandomPassword,
+    EncryptPDF
 } from '../wailsjs/go/gui/App';
 
 import { EventsOn } from "../wailsjs/runtime/runtime";
@@ -80,8 +81,22 @@ function bindEvents() {
 
     /* Wails events */
     EventsOn("PDFSEC:input-selected", handleInputSelected);
+
+    EventsOn("PDFSEC:encryption-finished", handleEncryptionFinished);
 }
 
+function handleEncryptionFinished(data){
+    console.log(data);
+
+    if (data.success) {
+        console.log("PDF encrypted");
+        showResultModal("PDF Encrypted!",true);
+        return;
+    }
+
+    console.error(data.error);
+    showResultModal(data.error,false);
+}
 
 async function handleGenerateReaderPassword() {
     const password = await generateRandomPassword();
@@ -150,7 +165,7 @@ function handleInputSelected(data) {
     DOM.outputFilePath.value = data.outputPath;
 }
 
-function handleProtectPDF() {
+async function handleProtectPDF() {
     const payload = {
         inputPath: DOM.inputFilePath.value.trim(),
         outputPath: DOM.outputFilePath.value.trim(),
@@ -161,6 +176,7 @@ function handleProtectPDF() {
     };
 
     console.log('protect', payload);
+    await EncryptPDF(payload);
 
 }
 
@@ -251,4 +267,9 @@ function getSelectedPermissions() {
             '#permissions-grid input[type=checkbox]:checked'
         )
     ].map(cb => cb.value);
+}
+
+function showResultModal(message, success = true) {
+    if(success) alert(message);
+    else alert("FAIL: " + message);
 }

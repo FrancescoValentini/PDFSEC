@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"pdfsec/internal/core"
+	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -13,6 +15,15 @@ type App struct {
 	inputFile  string
 	outputFile string
 	ctx        context.Context
+}
+
+type EncryptPayload struct {
+	InputPath  string   `json:"inputPath"`
+	OutputPath string   `json:"outputPath"`
+	ReaderPwd  string   `json:"readerPwd"`
+	OwnerPwd   string   `json:"ownerPwd"`
+	OwnerOnly  bool     `json:"ownerOnly"`
+	Perms      []string `json:"perms"`
 }
 
 // NewApp creates a new App application struct
@@ -79,4 +90,51 @@ func (a *App) SaveFileDialog() (string, error) {
 
 func (a *App) RandomPassword() (string, error) {
 	return core.GeneratePassword()
+}
+
+func (a *App) UI_EncryptionFinished(success bool, err error) {
+
+	payload := map[string]interface{}{
+		"success": success,
+	}
+
+	if err != nil {
+		payload["error"] = err.Error()
+	}
+
+	runtime.EventsEmit(a.ctx, "PDFSEC:encryption-finished", payload)
+}
+
+func (a *App) EncryptPDF(payload EncryptPayload) error {
+	var err error
+	var perms model.PermissionFlags
+	permString := strings.Join(payload.Perms, ",")
+
+	if permString == "" {
+		perms = model.PermissionsNone
+	} else {
+		perms, err = core.ParsePermissions(permString)
+	}
+
+	if err != nil {
+		a.UI_EncryptionFinished(false, err)
+		return err
+	}
+
+	err = core.EncryptPDF(core.EncryptOptions{
+		InputFile:     payload.InputPath,
+		OutputFile:    payload.OutputPath,
+		UserPassword:  payload.ReaderPwd,
+		OwnerPassword: payload.OwnerPwd,
+		Permissions:   perms,
+	})
+
+	if err != nil {
+		a.UI_EncryptionFinished(false, err)
+		return err
+	}
+
+	a.UI_EncryptionFinished(true, nil)
+
+	return nil
 }
