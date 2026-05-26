@@ -10,6 +10,14 @@ export function OpenFileDialog() {
   return window['go']['gui']['App']['OpenFileDialog']();
 }
 
+export function RandomPassword() {
+  return window['go']['gui']['App']['RandomPassword']();
+}
+
 export function SaveFileDialog() {
   return window['go']['gui']['App']['SaveFileDialog']();
+}
+
+export function UI_UpdateOutputPath() {
+  return window['go']['gui']['App']['UI_UpdateOutputPath']();
 }

@@ -10,7 +10,9 @@ import (
 
 // App struct
 type App struct {
-	ctx context.Context
+	inputFile  string
+	outputFile string
+	ctx        context.Context
 }
 
 // NewApp creates a new App application struct
@@ -43,8 +45,17 @@ func (a *App) OpenFileDialog() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	a.inputFile = path
+	a.outputFile = core.ResolveOutputFile(a.inputFile, a.outputFile)
+	a.UI_UpdateOutputPath()
 	return path, nil
+}
+
+func (a *App) UI_UpdateOutputPath() {
+	payload := map[string]interface{}{
+		"outputPath": a.outputFile,
+	}
+	runtime.EventsEmit(a.ctx, "PDFSEC:input-selected", payload)
 }
 
 func (a *App) SaveFileDialog() (string, error) {
@@ -62,6 +73,10 @@ func (a *App) SaveFileDialog() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	a.outputFile = path
 	return path, nil
+}
+
+func (a *App) RandomPassword() (string, error) {
+	return core.GeneratePassword()
 }
