@@ -92,6 +92,18 @@ func (a *App) RandomPassword() (string, error) {
 	return core.GeneratePassword()
 }
 
+func (a *App) IsReady() bool {
+	if err := core.CheckFileExists(a.inputFile); err != nil {
+		return false
+	}
+
+	if a.outputFile == "" {
+		return false
+	}
+
+	return true
+}
+
 func (a *App) UI_EncryptionFinished(success bool, err error) {
 
 	payload := map[string]interface{}{

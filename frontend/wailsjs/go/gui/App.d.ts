@@ -6,6 +6,8 @@ export function EncryptPDF(arg1:gui.EncryptPayload):Promise<void>;
 
 export function Greet(arg1:string):Promise<string>;
 
+export function IsReady():Promise<boolean>;
+
 export function OpenFileDialog():Promise<string>;
 
 export function RandomPassword():Promise<string>;
