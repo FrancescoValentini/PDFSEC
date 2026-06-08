@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDFSEC — PDF Encryption</title>
+    <link href="style.css" rel="stylesheet" />
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="app-logo"><i class="bi bi-shield-lock-fill"></i></div>
+        <div>
+            <div class="app-title">PDFSEC</div>
+            <div class="app-subtitle">PDF Encryption Utility</div>
+        </div>
+        <span class="app-version">v1.0.1</span>
+    </header>
+
+    <!-- Main card -->
+    <main class="app-card">
+
+        <!-- FILES -->
+        <div class="section-header">
+            <i class="bi bi-folder2-open"></i>
+            <span>Files</span>
+        </div>
+        <div class="section-body">
+
+            <div class="field-block">
+                <div class="field-label">Input file</div>
+                <div class="field-row">
+                    <input id="input-file-path" class="app-input" type="text" placeholder="/path/to/document.pdf"
+                        readonly />
+                    <button id="btn-open-file" class="text-btn" title="Browse for input PDF">
+                        <i class="bi bi-folder2-open"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="field-block">
+                <div class="field-label">Output file</div>
+                <div class="field-row">
+                    <input id="output-file-path" class="app-input" type="text"
+                        placeholder="/path/to/document-protected.pdf" readonly />
+                    <button id="btn-save-file" class="text-btn" title="Choose output destination">
+                        <i class="bi bi-floppy2"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- PASSWORDS -->
+        <div class="section-header">
+            <i class="bi bi-key"></i>
+            <span>Passwords</span>
+        </div>
+        <div class="section-body">
+
+            <div class="field-block">
+                <div class="field-label">Reader password <span
+                        style="color:var(--text-muted);font-family:var(--mono);font-size:0.62rem;">(user / open)</span>
+                </div>
+                <div class="field-row">
+                    <input id="reader-password" class="app-input" type="password"
+                        placeholder="Leave blank to generate randomly" autocomplete="new-password" />
+                    <button id="btn-regen-reader" class="icon-btn" title="Generate random reader password">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    <button id="btn-toggle-reader" class="icon-btn" title="Show / hide reader password">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="field-block">
+                <div class="field-label">Owner password <span
+                        style="color:var(--text-muted);font-family:var(--mono);font-size:0.62rem;">(permissions key)</span></div>
+                <div class="field-row">
+                    <input id="owner-password" class="app-input" type="password"
+                        placeholder="Leave blank to generate randomly" autocomplete="new-password" />
+                    <button id="btn-regen-owner" class="icon-btn" title="Generate random owner password">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    <button id="btn-toggle-owner" class="icon-btn" title="Show / hide owner password">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- No reader password toggle -->
+            <label id="lbl-owner-only" style="display:flex;align-items:center;gap:9px;cursor:pointer;margin-top:4px;">
+                <input id="chk-owner-only" type="checkbox" style="display:none;" />
+                <span id="owner-only-check" class="perm-check"></span>
+                <span style="font-family:var(--mono);font-size:0.72rem;color:var(--text-muted);">
+                    No reader password - set permissions only via owner password
+                </span>
+            </label>
+
+        </div>
+
+        <!-- PERMISSIONS -->
+        <div class="section-header">
+            <i class="bi bi-sliders2"></i>
+            <span>Permissions</span>
+        </div>
+        <div class="section-body">
+            <div class="perms-grid" id="permissions-grid">
+                <!-- items injected by JS -->
+            </div>
+        </div>
+
+        <!-- PROGRESS -->
+        <div id="progress-bar-container">
+            <div class="progress-track">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+            <div id="progress-label" class="progress-label"></div>
+        </div>
+
+        <!-- ACTION -->
+        <div class="protect-wrap">
+            <button
+                id="btn-protect"
+                type="button"
+                disabled
+                class="btn btn-primary"
+            >
+                Protect PDF
+            </button>
+        </div>
+
+    </main>
+
+    <script src="./src/main.js" type="module"></script>
+</body>
+
+</html>
