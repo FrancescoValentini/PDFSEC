@@ -25,7 +25,8 @@ func main() {
 		Bind: []interface{}{
 			app,
 		},
-		DisableResize: true,
+		DisableResize:            true,
+		EnableDefaultContextMenu: false,
 	})
 	if err != nil {
 		log.Fatal(err)
