@@ -223,6 +223,8 @@ body {
     font-size: 0.84rem;
 
     color: var(--text);
+
+    font-family: monospace;
 }
 
 .app-input:focus {
